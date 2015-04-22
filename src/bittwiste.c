@@ -35,6 +35,8 @@ int csum_opt = 1;               /* set to 0 to disable checksum correction */
 u_char *payload_opt = NULL;     /* payload in hex digits *NOTFREED* */
 u_short payload_len_opt = 0;    /* length of payload in bytes */
 int linktype_opt = -1;          /* pcap preamble link type field, -1 -> no override */
+int forge_ip_len = 0;           /* forge IP length header */
+u_short length_opt = 0;         /* value of forged IP length header */
 
 /* header specific options *NOTFREED* */
 struct ethopt *ethopt;          /* Ethernet options */
@@ -63,7 +65,7 @@ int main(int argc, char **argv)
         program_name = argv[0];
 
     /* process general options */
-    while ((c = getopt(argc, argv, "I:O:L:X:CM:D:R:S:T:h")) != -1) {
+    while ((c = getopt(argc, argv, "I:O:L:X:CM:D:R:S:T:F:h")) != -1) {
         switch (c) {
             case 'I':
                 infile = optarg;
@@ -193,6 +195,11 @@ int main(int argc, char **argv)
                 error("invalid header specification");
             /* process header specific options */
             parse_header_options(argc, argv);
+                break;
+            case 'F':
+                forge_ip_len = 1;
+                length_opt = (u_short) atoi(optarg);
+                printf("forge ip_len to %u\n", length_opt);
                 break;
             case 'h':
             default:
@@ -1248,6 +1255,9 @@ u_short parse_ip(const u_char *pkt_data,
     i = 0;
     while (i++ < PCAP_HDR_LEN + ETHER_HDR_LEN)
         *new_pkt_data++;
+
+    /* use forged ip_len if set */
+    if (forge_ip_len) ip_hdr->ip_len = htons(length_opt);
 
     memcpy(new_pkt_data, ip_hdr, IP_HDR_LEN);
 
